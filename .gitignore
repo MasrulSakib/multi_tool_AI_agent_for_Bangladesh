@@ -1,0 +1,17 @@
+# Environment variables and credentials
+.env
+
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated local databases
+data/*.db
+
+# Tooling and editor files
+.pytest_cache/
+.mypy_cache/
+.vscode/
+.idea/
