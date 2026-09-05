@@ -1,139 +1,121 @@
 # Multi-Tool AI Agent for Bangladesh
 
-A command-line AI assistant for Bangladesh-focused questions, built with
-**LangChain's `AgentExecutor`**. It routes each question to the right
-tool: three SQLite-backed tools for structured data, and a Tavily web
-search tool for general knowledge.
+A command-line AI assistant for Bangladesh-focused questions. The agent uses Groq for reasoning, SQLite databases for structured local data, and Tavily for current general-information searches.
 
-## Features
+## Capabilities
 
-- **Main Agent** (`AgentExecutor`) decides which tool to call for each question.
-- **InstitutionsDBTool** answers questions about universities, colleges, madrasahs, and government institutions.
-- **HospitalsDBTool** answers questions about hospitals, clinics, and health facilities.
-- **RestaurantsDBTool** answers questions about restaurants, cuisine, ratings, and locations.
-- **WebSearchTool** (Tavily) handles general questions about Bangladesh - policy, history, culture.
+- Search and summarize Bangladeshi institution, hospital, and restaurant records.
+- Answer local counts, lists, and detail queries with SQLite-backed tools.
+- Search the web for general questions about Bangladesh, including policy, history, and culture.
+- Route each request automatically to the most suitable tool.
 
-## Project structure
+## Architecture
 
-```text
-.
-├── data/
-│   ├── prepare_data.py        # Downloads datasets and builds SQLite databases
-│   ├── institutions.db
-│   ├── hospitals.db
-│   └── restaurants.db
-├── tools/
-│   ├── db_utils.py            # Shared SQLite helper
-│   ├── institutions_tool.py
-│   ├── hospitals_tool.py
-│   ├── restaurants_tool.py
-│   └── web_search_tool.py     # Tavily search integration
-├── agent.py                   # LangChain AgentExecutor + tool routing
-├── main.py                    # Command-line chat application
-├── requirements.txt
-└── .env.example
-```
+`AgentExecutor` receives the user request and selects one of four tools:
+
+| Tool | Purpose |
+| --- | --- |
+| `institutions_db_tool` | Educational and government institution data |
+| `hospitals_db_tool` | Hospital, clinic, and health-facility data |
+| `restaurants_db_tool` | Restaurant names, locations, and ratings |
+| `web_search_tool` | General Bangladesh-related web searches via Tavily |
+
+The three database tools query separate SQLite files generated from public Hugging Face datasets. Tool descriptions provide the agent with the table names and query requirements; the assistant turns tool results into a readable response.
 
 ## Requirements
 
 - Python 3.10 or later
-- A free Groq API key (LLM provider)
-- A Tavily API key (web search)
+- A [Groq API key](https://console.groq.com/keys)
+- A [Tavily API key](https://app.tavily.com/home)
+- Internet access when building the local databases or using web search
 
-## Setup
+## Quick start
 
-1. Clone the repository and enter the project directory.
+1. Clone the repository and enter its directory.
 
    ```bash
-   git clone <your-repository-url>
-   cd bd-multi-tool-agent
+   git clone <repository-url>
+   cd Multi_Tool_AI_Agent_for_Bangladesh
    ```
 
-2. Create and activate a virtual environment (recommended).
+2. Create and activate a virtual environment.
 
-   ```bash
+   ```powershell
    python -m venv .venv
-   # Windows PowerShell
    .venv\Scripts\Activate.ps1
-   # macOS/Linux
-   source .venv/bin/activate
    ```
 
-3. Install dependencies.
+   On macOS or Linux, use `source .venv/bin/activate` instead.
+
+3. Install the dependencies.
 
    ```bash
    pip install -r requirements.txt
    ```
 
-4. Create your environment file and add API keys.
+4. Create a local environment file.
 
-   ```bash
-   cp .env.example .env
+   ```powershell
+   Copy-Item .env.example .env
    ```
 
-   Set `GROQ_API_KEY`, `MODEL_NAME`, and `TAVILY_API_KEY` in `.env`.
+   On macOS or Linux, use `cp .env.example .env`.
 
-5. Build the local databases.
+5. Set the following values in `.env`:
+
+   ```env
+   GROQ_API_KEY="your-groq-api-key"
+   MODEL_NAME="openai/gpt-oss-120b"
+   TAVILY_API_KEY="your-tavily-api-key"
+   ```
+
+6. Build the local SQLite databases.
 
    ```bash
    python data/prepare_data.py
    ```
 
-   This downloads the source datasets from Hugging Face and creates the
-   SQLite database files in `data/`. (The repo already ships with these
-   three `.db` files pre-built from the real datasets, so this step is
-   only needed if you delete them or want to refresh the data.)
-
-6. Start the agent.
+7. Start the assistant.
 
    ```bash
    python main.py
    ```
 
-   Type `exit` or `quit` to close the chat.
+   Type `exit` or `quit` to end the session.
 
-## How the routing works
+## Example questions
 
-`agent.py` builds one `AgentExecutor` with all four tools attached. On
-each turn, the LLM reads the system prompt's routing rules and the
-user's question, then decides which single tool to call:
+- `How many hospitals are in Dhaka?`
+- `List government institutions in Rajshahi.`
+- `Find restaurants in Chattogram with high ratings.`
+- `What is the role of DGHS in Bangladesh?`
 
-| Query                                                     | Routed to          |
-| --------------------------------------------------------- | ------------------ |
-| `How many hospitals are in Dhaka?`                        | HospitalsDBTool    |
-| `Which universities in Bangladesh offer medical degrees?` | InstitutionsDBTool |
-| `Find restaurants in Chattogram serving biryani.`         | RestaurantsDBTool  |
-| `What is the role of DGHS in Bangladesh?`                 | WebSearchTool      |
-| `How many government institutions are in Rajshahi?`       | InstitutionsDBTool |
+## Project structure
 
-Each DB tool writes and runs a SQL query against its own database, gets
-the raw rows back from `db_utils.run_query()`, and the LLM turns that
-into a natural-language answer rather than showing raw SQL or rows.
-
-## A note on the data
-
-The two structured datasets don't cover every field the example queries
-imply, since they reflect what the real Hugging Face sources contain:
-
-- **Hospitals dataset** has no bed-count or doctor-count columns, so a
-  question like "hospitals with bed capacity" can't be answered from
-  this data - the agent will correctly say no matching data was found.
-- **Institutions dataset** has no explicit "University" category; it's
-  EIIN-level records (schools, colleges, madrasahs, technical
-  institutes). Medical-degree-granting institutions show up as "Medical
-  College" in the _hospitals_ dataset's `type` column instead.
-
-## Why `langchain-classic`
-
-LangChain 1.x moved the legacy `AgentExecutor` / `create_tool_calling_agent`
-APIs out of the main `langchain` package and into the separate
-`langchain-classic` package (the new default agent API is
-`langchain.agents.create_agent`). Since the assignment specifically
-asks for `AgentExecutor`, this project imports it from
-`langchain_classic.agents`.
+```text
+.
+|-- agent.py                  # Agent configuration and request routing
+|-- main.py                   # Command-line application entry point
+|-- requirements.txt
+|-- .env.example              # Environment-variable template
+|-- data/
+|   `-- prepare_data.py       # Downloads datasets and creates SQLite files
+`-- tools/
+    |-- db_utils.py           # Shared SQLite query helper
+    |-- institutions_tool.py
+    |-- hospitals_tool.py
+    |-- restaurants_tool.py
+    `-- web_search_tool.py    # Tavily integration
+```
 
 ## Data sources
 
 - [Institutional Information of Bangladesh](https://huggingface.co/datasets/Mahadih534/Institutional-Information-of-Bangladesh)
 - [All Bangladeshi Hospitals](https://huggingface.co/datasets/Mahadih534/all-bangladeshi-hospitals)
 - [Bangladeshi Restaurant Data](https://huggingface.co/datasets/Mahadih534/Bangladeshi-Restaurant-Data)
+
+## Notes
+
+- Generated database files and `.env` are excluded from version control. Run `python data/prepare_data.py` after a fresh clone or whenever you want to refresh the source data.
+- Never commit API keys. Keep them only in your local `.env` file.
+- The agent uses `langchain-classic` because the project relies on the legacy `AgentExecutor` API.

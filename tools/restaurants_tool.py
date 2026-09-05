@@ -1,11 +1,3 @@
-"""
-restaurants_tool.py
-
-Same idea as institutions_tool.py, but this tool answers questions about
-the 'restaurants' table instead (name, rating, address, location, etc).
-See institutions_tool.py for a full explanation of how @tool works.
-"""
-
 from langchain_core.tools import tool
 
 from .db_utils import run_query
