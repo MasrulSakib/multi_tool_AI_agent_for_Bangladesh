@@ -96,6 +96,7 @@ The three database tools query separate SQLite files generated from public Huggi
 .
 |-- agent.py                  # Agent configuration and request routing
 |-- main.py                   # Command-line application entry point
+|-- LICENSE                   # MIT License
 |-- requirements.txt
 |-- .env.example              # Environment-variable template
 |-- data/
@@ -119,3 +120,7 @@ The three database tools query separate SQLite files generated from public Huggi
 - Generated database files and `.env` are excluded from version control. Run `python data/prepare_data.py` after a fresh clone or whenever you want to refresh the source data.
 - Never commit API keys. Keep them only in your local `.env` file.
 - The agent uses `langchain-classic` because the project relies on the legacy `AgentExecutor` API.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
